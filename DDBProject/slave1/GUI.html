@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Distributed Database Slave GUI</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .status-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: #f0f0f0;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+        .status-indicator {
+            display: flex;
+            align-items: center;
+        }
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        .online {
+            background-color: #4CAF50;
+        }
+        .offline {
+            background-color: #f44336;
+        }
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid #ddd;
+            margin-bottom: 20px;
+        }
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            border: 1px solid transparent;
+            border-bottom: none;
+            border-radius: 4px 4px 0 0;
+            background-color: #f1f1f1;
+            margin-right: 5px;
+        }
+        .tab.active {
+            background-color: white;
+            border-color: #ddd;
+            border-bottom: 2px solid white;
+            margin-bottom: -1px;
+        }
+        .tab-content {
+            display: none;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-top: none;
+            border-radius: 0 0 4px 4px;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="text"], select, textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        textarea {
+            height: 100px;
+            font-family: monospace;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .result-container {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f9f9f9;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        th, td {
+            padding: 8px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #f1f1f1;
+        }
+        .error {
+            color: #f44336;
+            font-weight: bold;
+        }
+        .success {
+            color: #4CAF50;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Distributed Database Slave GUI</h1>
+        
+        <div class="status-bar">
+            <div class="status-indicator">
+                <div id="masterStatus" class="status-dot offline"></div>
+                <span>Master Status: <span id="masterStatusText">Checking...</span></span>
+            </div>
+            <div>
+                <span>Master Address: </span>
+                <input type="text" id="masterAddressInput" value="http://192.168.1.5:8001" size="25">
+                <button id="updateMasterBtn">Update</button>
+            </div>
+        </div>
+
+        <div class="tabs">
+            <div class="tab active" data-tab="select">Select</div>
+            <div class="tab" data-tab="insert">Insert</div>
+            <div class="tab" data-tab="update">Update</div>
+            <div class="tab" data-tab="delete">Delete</div>
+        </div>
+
+        <div id="selectTab" class="tab-content active">
+            <h3>Select Records</h3>
+            <div class="form-group">
+                <label for="selectDBName">Database Name:</label>
+                <input type="text" id="selectDBName">
+            </div>
+            <div class="form-group">
+                <label for="selectTableName">Table Name:</label>
+                <input type="text" id="selectTableName">
+            </div>
+            <button id="selectBtn">Select Records</button>
+            
+            <div class="result-container">
+                <h4>Results:</h4>
+                <div id="selectResults">No data</div>
+            </div>
+        </div>
+
+        <div id="insertTab" class="tab-content">
+            <h3>Insert Record</h3>
+            <div class="form-group">
+                <label for="insertDBName">Database Name:</label>
+                <input type="text" id="insertDBName">
+            </div>
+            <div class="form-group">
+                <label for="insertTableName">Table Name:</label>
+                <input type="text" id="insertTableName">
+            </div>
+            <div class="form-group">
+                <label for="insertValues">Values (comma separated, e.g. 'value1', 2, 'value3'):</label>
+                <textarea id="insertValues"></textarea>
+            </div>
+            <button id="insertBtn">Insert Record</button>
+            
+            <div class="result-container">
+                <h4>Status:</h4>
+                <div id="insertResults">Waiting for operation</div>
+            </div>
+        </div>
+
+        <div id="updateTab" class="tab-content">
+            <h3>Update Record</h3>
+            <div class="form-group">
+                <label for="updateDBName">Database Name:</label>
+                <input type="text" id="updateDBName">
+            </div>
+            <div class="form-group">
+                <label for="updateTableName">Table Name:</label>
+                <input type="text" id="updateTableName">
+            </div>
+            <div class="form-group">
+                <label for="updateSet">SET (e.g. column1='value1', column2=2):</label>
+                <textarea id="updateSet"></textarea>
+            </div>
+            <div class="form-group">
+                <label for="updateWhere">WHERE (e.g. id=1):</label>
+                <textarea id="updateWhere"></textarea>
+            </div>
+            <button id="updateBtn">Update Record</button>
+            
+            <div class="result-container">
+                <h4>Status:</h4>
+                <div id="updateResults">Waiting for operation</div>
+            </div>
+        </div>
+
+        <div id="deleteTab" class="tab-content">
+            <h3>Delete Record</h3>
+            <div class="form-group">
+                <label for="deleteDBName">Database Name:</label>
+                <input type="text" id="deleteDBName">
+            </div>
+            <div class="form-group">
+                <label for="deleteTableName">Table Name:</label>
+                <input type="text" id="deleteTableName">
+            </div>
+            <div class="form-group">
+                <label for="deleteWhere">WHERE (e.g. id=1):</label>
+                <textarea id="deleteWhere"></textarea>
+            </div>
+            <button id="deleteBtn">Delete Record</button>
+            
+            <div class="result-container">
+                <h4>Status:</h4>
+                <div id="deleteResults">Waiting for operation</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let masterAddress = "http://192.168.1.5:8001";
+        
+        // Helper functions
+        function showMessage(elementId, message, isError = false) {
+            const element = document.getElementById(elementId);
+            element.innerHTML = message;
+            element.className = isError ? 'error' : 'success';
+        }
+        
+        function createTable(data) {
+            if (!data || data.length === 0) {
+                return '<p>No records found</p>';
+            }
+            
+            const columns = Object.keys(data[0]);
+            let table = '<table><thead><tr>';
+            
+            // Create headers
+            columns.forEach(column => {
+                table += `<th>${column}</th>`;
+            });
+            table += '</tr></thead><tbody>';
+            
+            // Create rows
+            data.forEach(row => {
+                table += '<tr>';
+                columns.forEach(column => {
+                    const value = row[column] === null ? 'NULL' : row[column];
+                    table += `<td>${value}</td>`;
+                });
+                table += '</tr>';
+            });
+            
+            table += '</tbody></table>';
+            return table;
+        }
+        
+        // Tab functionality
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                // Remove active class from all tabs and content
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                
+                // Add active class to clicked tab
+                tab.classList.add('active');
+                document.getElementById(`${tab.dataset.tab}Tab`).classList.add('active');
+            });
+        });
+        
+        // Check master status
+        function checkMasterStatus() {
+            fetch(`${masterAddress}/ping`)
+                .then(response => {
+                    if (response.ok) {
+                        document.getElementById('masterStatus').className = 'status-dot online';
+                        document.getElementById('masterStatusText').textContent = 'Online';
+                    } else {
+                        throw new Error('Master not responding');
+                    }
+                })
+                .catch(error => {
+                    document.getElementById('masterStatus').className = 'status-dot offline';
+                    document.getElementById('masterStatusText').textContent = 'Offline';
+                    console.error('Error checking master:', error);
+                });
+        }
+        
+        // Update master address
+        document.getElementById('updateMasterBtn').addEventListener('click', () => {
+            const newAddress = document.getElementById('masterAddressInput').value.trim();
+            if (newAddress) {
+                masterAddress = newAddress;
+                checkMasterStatus();
+            }
+        });
+        
+        // Select records
+        document.getElementById('selectBtn').addEventListener('click', () => {
+            const dbName = document.getElementById('selectDBName').value.trim();
+            const tableName = document.getElementById('selectTableName').value.trim();
+            
+            if (!dbName || !tableName) {
+                showMessage('selectResults', 'Database name and table name are required', true);
+                return;
+            }
+            
+            fetch(`${masterAddress}/select?dbname=${encodeURIComponent(dbName)}&table=${encodeURIComponent(tableName)}`)
+                .then(response => {
+                    if (!response.ok) {
+                        return response.text().then(text => { throw new Error(text) });
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    document.getElementById('selectResults').innerHTML = createTable(data);
+                })
+                .catch(error => {
+                    showMessage('selectResults', `Error: ${error.message}`, true);
+                });
+        });
+        
+        // Insert record
+        document.getElementById('insertBtn').addEventListener('click', () => {
+            const dbName = document.getElementById('insertDBName').value.trim();
+            const tableName = document.getElementById('insertTableName').value.trim();
+            const values = document.getElementById('insertValues').value.trim();
+            
+            if (!dbName || !tableName || !values) {
+                showMessage('insertResults', 'All fields are required', true);
+                return;
+            }
+            
+            fetch(`${masterAddress}/insert`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    dbname: dbName,
+                    table: tableName,
+                    values: values
+                })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.text().then(text => { throw new Error(text) });
+                }
+                return response.json();
+            })
+            .then(data => {
+                showMessage('insertResults', data.message);
+            })
+            .catch(error => {
+                showMessage('insertResults', `Error: ${error.message}`, true);
+            });
+        });
+        
+        // Update record
+        document.getElementById('updateBtn').addEventListener('click', () => {
+            const dbName = document.getElementById('updateDBName').value.trim();
+            const tableName = document.getElementById('updateTableName').value.trim();
+            const setClause = document.getElementById('updateSet').value.trim();
+            const whereClause = document.getElementById('updateWhere').value.trim();
+            
+            if (!dbName || !tableName || !setClause || !whereClause) {
+                showMessage('updateResults', 'All fields are required', true);
+                return;
+            }
+            
+            fetch(`${masterAddress}/update`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    dbname: dbName,
+                    table: tableName,
+                    set: setClause,
+                    where: whereClause
+                })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.text().then(text => { throw new Error(text) });
+                }
+                return response.json();
+            })
+            .then(data => {
+                showMessage('updateResults', data.message);
+            })
+            .catch(error => {
+                showMessage('updateResults', `Error: ${error.message}`, true);
+            });
+        });
+        
+        // Delete record
+        document.getElementById('deleteBtn').addEventListener('click', () => {
+            const dbName = document.getElementById('deleteDBName').value.trim();
+            const tableName = document.getElementById('deleteTableName').value.trim();
+            const whereClause = document.getElementById('deleteWhere').value.trim();
+            
+            if (!dbName || !tableName || !whereClause) {
+                showMessage('deleteResults', 'All fields are required', true);
+                return;
+            }
+            
+            fetch(`${masterAddress}/delete`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    dbname: dbName,
+                    table: tableName,
+                    where: whereClause
+                })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.text().then(text => { throw new Error(text) });
+                }
+                return response.json();
+            })
+            .then(data => {
+                showMessage('deleteResults', data.message);
+            })
+            .catch(error => {
+                showMessage('deleteResults', `Error: ${error.message}`, true);
+            });
+        });
+        
+        // Initialize the page
+        document.addEventListener('DOMContentLoaded', () => {
+            checkMasterStatus();
+            // Check status every 10 seconds
+            setInterval(checkMasterStatus, 10000);
+        });
+    </script>
+</body>
+</html>
