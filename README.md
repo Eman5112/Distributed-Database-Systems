@@ -1,98 +1,310 @@
-# Distributed Database Slave GUI
+# Distributed Database System
 
-A web-based GUI for interacting with the distributed database master node from a slave node. This interface allows users to perform database operations like selecting, inserting, updating, and deleting records.
+A fault-tolerant distributed database system with master-slave architecture, built in Go. This system provides a RESTful API for database operations with automatic replication across multiple nodes and master election when the primary node fails.
 
 ## Features
 
-- Connect to master node with status monitoring
-- Select data from tables
-- Insert new records
-- Update existing records
-- Delete records
-- Responsive user interface with tabbed navigation
+- **Master-Slave Architecture**: One master node handles write operations and replicates changes to slave nodes
+- **Automatic Failover**: If the master node goes down, a slave node will automatically be elected as the new master
+- **RESTful API**: Simple HTTP API for database operations
+- **Cross-Origin Resource Sharing (CORS)**: Supports cross-origin requests
+- **Fault Tolerance**: Implements retry mechanisms for replication with exponential backoff
+- **Database Operations**: Support for creating/dropping databases, creating tables, and CRUD operations on records
+
+## Prerequisites
+
+- Go 1.16 or higher
+- MySQL server installed and running
+- Git (for cloning the repository)
 
 ## Setup Instructions
 
-### Prerequisites
+### 1. Clone the Repository
 
-- A running distributed database system with:
-  - Master node (default: http://192.168.1.5:8001)
-  - Slave node(s) (running on port 8002 or others)
-- MySQL database installed and configured on all nodes
-- Go environment set up for the backend
+```bash
+git clone <repository-url>
+cd distributed-database-system
+```
 
-### Installation
+### 2. Configure MySQL
 
-1. *Save the HTML file:*
-   
-   Save the slave-gui.html file to your local machine.
+Ensure MySQL is running and create user accounts with appropriate permissions:
 
-2. *Run the file in a web browser:*
-   
-   You can open the HTML file directly in a web browser. No web server is required as it's a client-side application.
+For master node:
+```sql
+CREATE USER 'root'@'localhost' IDENTIFIED BY 'root';
+GRANT ALL PRIVILEGES ON *.* TO 'root'@'localhost' WITH GRANT OPTION;
+FLUSH PRIVILEGES;
+```
 
-3. *Configure the master address:*
-   
-   If your master node is running on a different IP or port than the default (http://192.168.1.5:8001), update it in the GUI using the input field at the top of the page.
+For slave nodes:
+```sql
+CREATE USER 'root'@'localhost' IDENTIFIED BY 'rootroot';
+GRANT ALL PRIVILEGES ON *.* TO 'root'@'localhost' WITH GRANT OPTION;
+FLUSH PRIVILEGES;
+```
 
-## Usage Guide
+### 3. Configure Node Addresses
 
-### Connecting to Master
+Edit the master server configuration in `main.go` to update slave addresses if needed:
 
-1. The GUI automatically attempts to connect to the master node at startup
-2. The status indicator shows green when connected, red when disconnected
-3. You can update the master address manually if needed
+```go
+var slaveAddresses = []string{
+    "http://192.168.1.4:8002", 
+    "http://192.168.1.8:8005", 
+    "http://192.168.1.6:8004", 
+    "http://192.168.1.7:8006"
+}
+```
 
-### Select Records
+### 4. Build and Run the Master Node
 
-1. Click on the "Select" tab
-2. Enter the database name
-3. Enter the table name
-4. Click "Select Records" to fetch and display the data
+```bash
+go build -o master
+./master
+```
 
-### Insert Records
+The master server will be running on port 8001.
 
-1. Click on the "Insert" tab
-2. Enter the database name
-3. Enter the table name
-4. Enter the values as a comma-separated list (e.g., 'value1', 2, 'value3')
-5. Click "Insert Record" to add the new record
+### 5. Build and Run Slave Nodes
 
-### Update Records
+Update the slave configuration (port and credentials) in each slave's main.go file if needed, then:
 
-1. Click on the "Update" tab
-2. Enter the database name
-3. Enter the table name
-4. Enter the SET clause (e.g., column1='new value', column2=42)
-5. Enter the WHERE clause to specify which records to update (e.g., id=1)
-6. Click "Update Record" to apply the changes
+```bash
+go build -o slave
+./slave
+```
 
-### Delete Records
+Repeat for each slave node on different servers, changing the port number and MySQL credentials as necessary.
 
-1. Click on the "Delete" tab
-2. Enter the database name
-3. Enter the table name
-4. Enter the WHERE clause to specify which records to delete (e.g., id=1)
-5. Click "Delete Record" to remove the records
+## API Usage Examples
 
-## Troubleshooting
+### Check Node Status
 
-- If the master status shows offline, check that:
-  - The master node is running
-  - The IP address and port are correct
-  - There are no network issues or firewalls blocking the connection
-- If operations fail, check the error message displayed in the status area for details
+```bash
+curl http://localhost:8001/ping
+```
 
-## Architecture Notes
+Expected response:
+```
+pong
+```
 
-This GUI interacts with the distributed database system by:
-1. Sending HTTP requests to the master node
-2. The master node processes these requests and applies changes to the database
-3. The master node replicates these changes to all slave nodes
-4. Results are returned to the GUI and displayed to the user
+### Check if Node is Master
 
-## Security Considerations
+```bash
+curl http://localhost:8001/is-master
+```
 
-- This GUI is designed for internal use within a trusted network
-- No authentication is implemented in this basic version
-- Consider implementing authentication and HTTPS for production use
+Expected response:
+```json
+{"isMaster":true}
+```
+
+### Get Node Information
+```bash
+curl http://localhost:8001/nodes
+```
+
+Expected response:
+```json
+{
+  "master": "http://localhost:8001",
+  "slaves": [
+    "http://192.168.1.4:8002",
+    "http://192.168.1.8:8005",
+    "http://192.168.1.6:8004",
+    "http://192.168.1.7:8006"
+  ],
+  "isMaster": true
+}
+```
+
+### Create a Database
+
+```bash
+curl "http://localhost:8001/createdb?name=testdb"
+```
+
+Expected response:
+```json
+{"message":"Database created successfully"}
+```
+
+### Create a Table
+
+#### Method 1: Using schema parameter
+
+```bash
+curl -X POST "http://localhost:8001/createtable?dbname=testdb&table=users&schema=id%20INT%20AUTO_INCREMENT%20PRIMARY%20KEY,%20name%20VARCHAR(50),%20email%20VARCHAR(100)"
+```
+
+#### Method 2: Using JSON body with columns
+
+```bash
+curl -X POST "http://localhost:8001/createtable?dbname=testdb&table=users" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "columns": [
+      {"Name": "name", "DataType": "VARCHAR(50)"},
+      {"Name": "email", "DataType": "VARCHAR(100)"}
+    ]
+  }'
+```
+
+Expected response:
+```json
+{"message":"Table created successfully"}
+```
+
+### Insert a Record
+
+#### Method 1: Using values string
+
+```bash
+curl -X POST "http://localhost:8001/insert" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "dbname": "testdb",
+    "table": "users",
+    "values": "NULL, \"John Doe\", \"john@example.com\""
+  }'
+```
+
+#### Method 2: Using records object
+
+```bash
+curl -X POST "http://localhost:8001/insert" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "dbname": "testdb",
+    "table": "users",
+    "records": {
+      "name": "Jane Doe",
+      "email": "jane@example.com"
+    }
+  }'
+```
+
+Expected response:
+```json
+{"message":"Record inserted successfully"}
+```
+
+### Query Records
+
+```bash
+curl "http://localhost:8001/select?dbname=testdb&table=users"
+```
+
+Expected response:
+```json
+[
+  {
+    "Id": 1,
+    "email": "john@example.com",
+    "name": "John Doe"
+  },
+  {
+    "Id": 2,
+    "email": "jane@example.com",
+    "name": "Jane Doe"
+  }
+]
+```
+
+### Update a Record
+
+```bash
+curl -X POST "http://localhost:8001/update" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "dbname": "testdb",
+    "table": "users",
+    "set": "name = \"John Smith\"",
+    "where": "Id = 1"
+  }'
+```
+
+Expected response:
+```json
+{"message":"Record updated successfully"}
+```
+
+### Delete a Record
+
+```bash
+curl -X POST "http://localhost:8001/delete" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "dbname": "testdb",
+    "table": "users",
+    "where": "Id = 1"
+  }'
+```
+
+Expected response:
+```json
+{"message":"Record deleted successfully"}
+```
+
+### Drop a Database
+
+```bash
+curl "http://localhost:8001/dropdb?name=testdb"
+```
+
+Expected response:
+```json
+{"message":"Database dropped successfully"}
+```
+
+## Failover Process
+
+The system automatically checks the health of the master node every 10-15 seconds. If the master becomes unavailable, an election process starts among the slave nodes and a new master is elected.
+
+To test failover:
+1. Start the master and at least one slave node
+2. Terminate the master process
+3. Wait approximately 15 seconds
+4. Observe that one of the slave nodes becomes the new master
+
+You can check by running:
+```bash
+curl http://localhost:8006/is-master
+```
+
+## Architecture Overview
+
+### Master Node Responsibilities
+- Accept all client requests (read/write operations)
+- Execute operations on its local database
+- Replicate changes to all slave nodes
+- Monitor its own health
+
+### Slave Node Responsibilities
+- Maintain a replica of the master's data
+- Accept replication requests from the master
+- Monitor the master's health
+- Participate in leader election when the master fails
+- Take over as the new master when elected
+
+## Implementation Details
+
+- The system uses HTTP for communication between nodes
+- MySQL is used as the underlying database engine
+- Replication is done through the master pushing changes to slaves
+- Leader election uses a simple algorithm with randomized delays to prevent conflicts
+- Error handling includes retries with exponential backoff
+
+## Limitations and Future Improvements
+
+- Current implementation doesn't handle network partitions correctly
+- Authentication and security features are minimal
+- No built-in data partitioning/sharding
+- No automatic synchronization of a slave that was down and comes back online
+- Could add support for read replicas to distribute read operations
+
+## License
+
+[License Information]
