@@ -2,32 +2,9 @@
 
 A robust, fault-tolerant distributed database management system with master-slave architecture built with Go and MySQL.
 
-## Table of Contents
+## Architecture Overview
 
-- [Overview](#overview)
-- [Features](#features)
-- [System Requirements](#system-requirements)
-- [Installation & Setup](#installation--setup)
-  - [Prerequisites](#prerequisites)
-  - [Database Setup](#database-setup)
-  - [System Configuration](#system-configuration)
-  - [Running the System](#running-the-system)
-- [Usage Examples](#usage-examples)
-  - [Database Operations](#database-operations)
-  - [Table Operations](#table-operations)
-  - [Data Operations](#data-operations)
-  - [Search Operations](#search-operations)
-- [API Reference](#api-reference)
-- [System Architecture](#system-architecture)
-- [Troubleshooting](#troubleshooting)
-- [Contributing](#contributing)
-- [License](#license)
-
-## Overview
-
-This distributed database system implements a master-slave architecture for high availability and fault tolerance. It allows for automatic failover in case the master node becomes unavailable, with slaves capable of being promoted to master roles. The system handles database operations via a RESTful API and maintains data consistency through asynchronous replication.
-
-Architecture Overview
+```
 +-------------------------+
 |      Master Node        |
 |-------------------------|
@@ -46,18 +23,18 @@ Architecture Overview
 | - Listen to |  | - Listen to |
 |   MQ        |  |   MQ        |
 +-------------+  +-------------+
+```
 
 ## Features
 
-- Master-slave architecture with automatic failover
-- Database creation, modification, and deletion
-- Table management with custom schemas
-- CRUD operations for data management
-- Asynchronous replication with retry mechanisms
-- Search functionality
-- Health monitoring and leader election
-- REST API interface
-- Cross-Origin Resource Sharing (CORS) support
+- **Master-slave architecture** with automatic failover
+- **Database operations** - creation, modification, and deletion
+- **Table management** with custom schemas
+- **CRUD operations** for data management
+- **Asynchronous replication** with retry mechanisms
+- **Search functionality** across databases
+- **Health monitoring** and leader election
+- **REST API** interface with CORS support
 
 ## System Requirements
 
@@ -132,83 +109,30 @@ Architecture Overview
    ```
    Expected response: `{"isMaster":true}`
 
-4. Check slave status:
-   ```
-   curl http://localhost:8009/is-master
-   ```
-   Expected response: `{"isMaster":false}`
-
 ## Usage Examples
 
 ### Database Operations
 
 #### Create a Database
-
-**Request:**
 ```bash
 curl -X GET "http://localhost:8001/createdb?name=testdb"
 ```
 
-**Response:**
-```json
-{"message":"Database created successfully"}
-```
-
 #### Drop a Database
-
-**Request:**
 ```bash
 curl -X GET "http://localhost:8001/dropdb?name=testdb"
-```
-
-**Response:**
-```json
-{"message":"Database dropped successfully"}
 ```
 
 ### Table Operations
 
 #### Create a Table
-
-**Method 1: Using Schema String**
-
-**Request:**
 ```bash
 curl -X GET "http://localhost:8001/createtable?dbname=testdb&table=users&schema=name VARCHAR(100), email VARCHAR(100), age INT"
-```
-
-**Response:**
-```json
-{"message":"Table created successfully"}
-```
-
-**Method 2: Using JSON Body**
-
-**Request:**
-```bash
-curl -X POST "http://localhost:8001/createtable?dbname=testdb&table=products" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "columns": [
-      {"Name": "product_name", "DataType": "VARCHAR(100)"},
-      {"Name": "price", "DataType": "DECIMAL(10,2)"},
-      {"Name": "inventory", "DataType": "INT"}
-    ]
-  }'
-```
-
-**Response:**
-```json
-{"message":"Table created successfully"}
 ```
 
 ### Data Operations
 
 #### Insert Data
-
-**Method 1: Using Values String**
-
-**Request:**
 ```bash
 curl -X POST "http://localhost:8001/insert" \
   -H "Content-Type: application/json" \
@@ -219,45 +143,12 @@ curl -X POST "http://localhost:8001/insert" \
   }'
 ```
 
-**Method 2: Using Records Object**
-
-**Request:**
-```bash
-curl -X POST "http://localhost:8001/insert" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "dbname": "testdb", 
-    "table": "products", 
-    "records": {
-      "product_name": "Laptop", 
-      "price": 999.99, 
-      "inventory": 50
-    }
-  }'
-```
-
-**Response:**
-```json
-{"message":"Record inserted successfully"}
-```
-
 #### Select Data
-
-**Request:**
 ```bash
 curl -X GET "http://localhost:8001/select?dbname=testdb&table=users"
 ```
 
-**Response:**
-```json
-[
-  {"Id": 1, "name": "John Doe", "email": "john@example.com", "age": 30}
-]
-```
-
 #### Update Data
-
-**Request:**
 ```bash
 curl -X POST "http://localhost:8001/update" \
   -H "Content-Type: application/json" \
@@ -269,14 +160,7 @@ curl -X POST "http://localhost:8001/update" \
   }'
 ```
 
-**Response:**
-```json
-{"message":"Record updated successfully"}
-```
-
 #### Delete Data
-
-**Request:**
 ```bash
 curl -X POST "http://localhost:8001/delete" \
   -H "Content-Type: application/json" \
@@ -285,25 +169,6 @@ curl -X POST "http://localhost:8001/delete" \
     "table": "users", 
     "where": "Id = 1"
   }'
-```
-
-**Response:**
-```json
-{"message":"Record deleted successfully"}
-```
-
-### Search Operations
-
-**Request:**
-```bash
-curl -X GET "http://localhost:8001/search?dbname=testdb&table=products&column=product_name&value=Laptop"
-```
-
-**Response:**
-```json
-[
-  {"Id": 1, "product_name": "Laptop", "price": "999.99", "inventory": 50}
-]
 ```
 
 ## API Reference
@@ -338,13 +203,51 @@ curl -X GET "http://localhost:8001/search?dbname=testdb&table=products&column=pr
 | `/replicate/delete` | POST | Replicate delete | JSON body with deletion details |
 | `/search` | GET | Search records | `dbname`, `table`, `column`, `value` (query params) |
 
-## System Architecture
+## System Architecture Details
 
-The system uses a master-slave architecture:
+The distributed database system uses a master-slave architecture for high availability and fault tolerance:
 
-1. **Master Node** - Handles all write operations and coordinates replication
-2. **Slave Nodes** - Process read operations and maintain replicated copies of data
-3. **Failover Mechanism** - Automatic promotion of slaves to master role when needed
+1. **Master Node**
+   - Handles all write operations (INSERT, UPDATE, DELETE)
+   - Coordinates data replication to slave nodes
+   - Manages database and table creation/deletion
+   - Automatically broadcasts changes to all registered slaves
 
-For more details, refer to the [architecture document](./ARCHITECTURE.md).
+2. **Slave Nodes**
+   - Process read operations (SELECT, SEARCH)
+   - Maintain synchronized copies of master data
+   - Can be promoted to master in case of master failure
+   - Listen for updates from master node
 
+3. **Replication Flow**
+   - Client sends write request to master
+   - Master processes request on its database
+   - Master broadcasts change to all slave nodes
+   - Slaves apply change to their local databases
+   - Acknowledgement sent back to master
+
+4. **Failover Mechanism**
+   - Health monitoring between nodes
+   - Automatic detection of failed master
+   - Election process to promote slave to new master
+   - System reconfiguration for new topology
+
+## Troubleshooting
+
+Common issues and their solutions:
+
+- **Connection errors**: Verify network connectivity between nodes
+- **Replication failures**: Check MySQL logs and ensure proper permissions
+- **Inconsistent data**: Use `/sync` endpoint to force full resynchronization
+
+## Contributing
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
