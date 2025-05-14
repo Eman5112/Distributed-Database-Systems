@@ -1,7 +1,30 @@
 # Distributed Master-Slave Database System
 
 A robust, fault-tolerant distributed database management system with master-slave architecture built with Go and MySQL.
+## Table of Contents
 
+- [Overview](#overview)
+- [Features](#features)
+- [System Requirements](#system-requirements)
+- [Installation & Setup](#installation--setup)
+  - [Prerequisites](#prerequisites)
+  - [Database Setup](#database-setup)
+  - [System Configuration](#system-configuration)
+  - [Running the System](#running-the-system)
+- [Usage Examples](#usage-examples)
+  - [Database Operations](#database-operations)
+  - [Table Operations](#table-operations)
+  - [Data Operations](#data-operations)
+  - [Search Operations](#search-operations)
+- [API Reference](#api-reference)
+- [System Architecture](#system-architecture)
+- [Troubleshooting](#troubleshooting)
+- [Contributing](#contributing)
+- [License](#license)
+
+## Overview
+
+This distributed database system implements a master-slave architecture for high availability and fault tolerance. It allows for automatic failover in case the master node becomes unavailable, with slaves capable of being promoted to master roles. The system handles database operations via a RESTful API and maintains data consistency through asynchronous replication.
 ## Architecture Overview
 
 ```
@@ -232,22 +255,4 @@ The distributed database system uses a master-slave architecture for high availa
    - Election process to promote slave to new master
    - System reconfiguration for new topology
 
-## Troubleshooting
 
-Common issues and their solutions:
-
-- **Connection errors**: Verify network connectivity between nodes
-- **Replication failures**: Check MySQL logs and ensure proper permissions
-- **Inconsistent data**: Use `/sync` endpoint to force full resynchronization
-
-## Contributing
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
