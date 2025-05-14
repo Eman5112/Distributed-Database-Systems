@@ -328,34 +328,3 @@ The system uses a master-slave architecture:
 
 For more details, refer to the [architecture document](./ARCHITECTURE.md).
 
-## Troubleshooting
-
-### Common Issues
-
-1. **Connection Refused**
-   - Ensure MySQL is running: `sudo systemctl status mysql`
-   - Verify database credentials in the code
-
-2. **Replication Failures**
-   - Check network connectivity between nodes
-   - Ensure all nodes are running and accessible
-
-3. **Permission Denied**
-   - Verify MySQL user permissions: `SHOW GRANTS FOR 'root'@'localhost';`
-
-### Logs
-
-- Check application logs for detailed error messages
-- MySQL logs are typically found at `/var/log/mysql/error.log`
-
-## Contributing
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
