@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>Distributed DB Management</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #3a86ff;
+      --primary-dark: #2667e0;
+      --secondary: #4361ee;
+      --success: #4cc9f0;
+      --danger: #ff006e;
+      --warning: #fb8500;
+      --light: #f8f9fa;
+      --dark: #212529;
+      --gray: #6c757d;
+      --border-radius: 10px;
+      --box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
+      --transition: all 0.3s ease;
+    }
+    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #f0f2f5;
+      color: var(--dark);
+      line-height: 1.6;
+      padding: 20px;
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    
+    header {
+      background: linear-gradient(135deg, #3a86ff, #4361ee);
+      border-radius: var(--border-radius);
+      padding: 30px;
+      margin-bottom: 30px;
+      box-shadow: var(--box-shadow);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: white;
+    }
+    
+    h1 {
+      font-size: 32px;
+      margin-bottom: 10px;
+      font-weight: 700;
+    }
+    
+    h2 {
+      font-size: 22px;
+      color: var(--secondary);
+      margin-bottom: 20px;
+      font-weight: 600;
+    }
+    
+    h3 {
+      font-size: 18px;
+      color: var(--dark);
+      margin-bottom: 15px;
+    }
+    
+    .node-status {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 15px;
+      margin-bottom: 30px;
+    }
+    
+    .status-box {
+      padding: 15px 20px;
+      border-radius: var(--border-radius);
+      color: white;
+      font-weight: 500;
+      font-size: 16px;
+      display: flex;
+      align-items: center;
+      box-shadow: var(--box-shadow);
+      transition: var(--transition);
+      flex: 1;
+      min-width: 200px;
+    }
+    
+    .status-box i {
+      margin-right: 10px;
+      font-size: 20px;
+    }
+    
+    .status-master {
+      background: linear-gradient(135deg, #4cc9f0, #4895ef);
+    }
+    
+    .status-slave {
+      background: linear-gradient(135deg, #4361ee, #3f37c9);
+    }
+    
+    .status-down {
+      background: linear-gradient(135deg, #ff006e, #c30052);
+    }
+    
+    .status-new-master {
+      background: linear-gradient(135deg, #fb8500, #ffb703);
+    }
+    
+    .card {
+      background-color: white;
+      border-radius: var(--border-radius);
+      box-shadow: var(--box-shadow);
+      padding: 25px;
+      margin-bottom: 25px;
+      transition: var(--transition);
+      border-top: 5px solid var(--primary);
+    }
+    
+    .card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 12px 20px rgba(0, 0, 0, 0.15);
+    }
+    
+    .input-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 15px;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    
+    input {
+      flex: 1;
+      min-width: 200px;
+      padding: 12px 15px;
+      border: 1px solid #e0e0e0;
+      border-radius: var(--border-radius);
+      font-size: 16px;
+      transition: var(--transition);
+      background-color: #f9f9f9;
+    }
+    
+    input:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(74, 134, 255, 0.2);
+      background-color: white;
+    }
+    
+    input::placeholder {
+      color: #aaa;
+    }
+    
+    button {
+      background-color: var(--primary);
+      color: white;
+      border: none;
+      border-radius: var(--border-radius);
+      padding: 12px 24px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: var(--transition);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    
+    button:hover {
+      background-color: var(--primary-dark);
+      transform: translateY(-2px);
+      box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1);
+    }
+    
+    .button-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 15px;
+    }
+    
+    .danger-button {
+      background-color: var(--danger);
+    }
+    
+    .danger-button:hover {
+      background-color: #d4004d;
+    }
+    
+    pre {
+      background: #f8f9fa;
+      padding: 20px;
+      border-radius: var(--border-radius);
+      overflow-x: auto;
+      font-family: 'Consolas', 'Monaco', monospace;
+      font-size: 14px;
+      line-height: 1.5;
+      border-left: 5px solid var(--primary);
+      margin-top: 15px;
+    }
+    
+    .results-container {
+      margin-top: 20px;
+      background-color: #f8f9fa;
+      padding: 20px;
+      border-radius: var(--border-radius);
+    }
+    
+    .empty-results {
+      text-align: center;
+      padding: 30px;
+      color: var(--gray);
+      font-style: italic;
+    }
+    
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+      gap: 25px;
+    }
+    
+    .card-header {
+      display: flex;
+      align-items: center;
+      margin-bottom: 20px;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 15px;
+    }
+    
+    .card-header i {
+      font-size: 24px;
+      color: var(--primary);
+      margin-right: 15px;
+    }
+    
+    .card-header h2 {
+      margin-bottom: 0;
+    }
+    
+    .divider {
+      height: 1px;
+      background-color: #eee;
+      margin: 20px 0;
+    }
+    
+    @media (max-width: 768px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+      
+      .input-group {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      
+      input {
+        width: 100%;
+      }
+      
+      .button-group {
+        flex-direction: column;
+        width: 100%;
+      }
+      
+      .button-group button {
+        width: 100%;
+      }
+      
+      .status-box {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div>
+        <h1><i class="fas fa-database"></i> Distributed Database Management</h1>
+        <p>Master-Slave MySQL Replication System Dashboard</p>
+      </div>
+    </header>
+    
+    <div class="node-status" id="nodes-container">
+      <div id="master-status" class="status-box status-master">
+        <i class="fas fa-server"></i> Master: Up (Port 8001)
+      </div>
+      <div id="slave1-status" class="status-box status-slave">
+        <i class="fas fa-hdd"></i> Slave 1: Up (Port 8002)
+      </div>
+      <div id="slave2-status" class="status-box status-slave">
+        <i class="fas fa-hdd"></i> Slave 2: Up (Port 8003)
+      </div>
+    </div>
+    
+    <div class="card">
+      <div class="card-header">
+        <i class="fas fa-cogs"></i>
+        <h2>Database Configuration</h2>
+      </div>
+      <div class="input-group">
+        <input id="dbname" placeholder="Database Name" aria-label="Database Name">
+      </div>
+      <div class="button-group">
+        <button onclick="createDB()"><i class="fas fa-plus-circle"></i> Create Database</button>
+        <button onclick="dropDB()" class="danger-button"><i class="fas fa-trash-alt"></i> Drop Database</button>
+      </div>
+    </div>
+    
+    <div class="grid">
+      <div class="card">
+        <div class="card-header">
+          <i class="fas fa-table"></i>
+          <h2>Create Table</h2>
+        </div>
+        <div class="input-group">
+          <input id="table" placeholder="Table Name" aria-label="Table Name">
+        </div>
+        <div class="input-group">
+          <input id="schema" placeholder="Schema e.g. id INT, name VARCHAR(50)" aria-label="Schema Definition">
+        </div>
+        <button onclick="createTable()"><i class="fas fa-plus"></i> Create Table</button>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <i class="fas fa-plus-square"></i>
+          <h2>Insert Record</h2>
+        </div>
+        <div class="input-group">
+          <input id="insert_table" placeholder="Table Name" aria-label="Table for insertion">
+        </div>
+        <div class="input-group">
+          <input id="insert_values" placeholder="Values e.g. '1', 'John Doe'" aria-label="Values to insert">
+        </div>
+        <button onclick="insert()"><i class="fas fa-save"></i> Insert Record</button>
+      </div>
+    </div>
+    
+    <div class="grid">
+      <div class="card">
+        <div class="card-header">
+          <i class="fas fa-edit"></i>
+          <h2>Update Record</h2>
+        </div>
+        <div class="input-group">
+          <input id="update_table" placeholder="Table Name" aria-label="Table for update">
+        </div>
+        <div class="input-group">
+          <input id="update_set" placeholder="Set clause e.g. name='Jane Doe'" aria-label="Set clause">
+        </div>
+        <div class="input-group">
+          <input id="update_where" placeholder="Where clause e.g. id=1" aria-label="Where clause">
+        </div>
+        <button onclick="update()"><i class="fas fa-sync-alt"></i> Update Record</button>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <i class="fas fa-trash"></i>
+          <h2>Delete Record</h2>
+        </div>
+        <div class="input-group">
+          <input id="delete_table" placeholder="Table Name" aria-label="Table for deletion">
+        </div>
+        <div class="input-group">
+          <input id="delete_where" placeholder="Where clause e.g. id=1" aria-label="Where clause">
+        </div>
+        <button onclick="deleteRec()" class="danger-button"><i class="fas fa-trash-alt"></i> Delete Record</button>
+      </div>
+    </div>
+    
+    <div class="card">
+      <div class="card-header">
+        <i class="fas fa-search"></i>
+        <h2>Query Records</h2>
+      </div>
+      
+      <div class="input-group">
+        <input id="select_table" placeholder="Table Name" aria-label="Table to query">
+        <button onclick="selectAll()"><i class="fas fa-table"></i> Select All Records</button>
+      </div>
+      
+      <div class="divider"></div>
+      
+      <h3><i class="fas fa-filter"></i> Filter Results</h3>
+      <div class="input-group">
+        <input id="search_column" placeholder="Column to search" aria-label="Column to search">
+        <input id="search_value" placeholder="Search value" aria-label="Search value">
+        <button onclick="search()"><i class="fas fa-search"></i> Search</button>
+      </div>
+      
+      <div class="results-container">
+        <h3>Results:</h3>
+        <pre id="results" class="empty-results">No data yet. Run a query to see results here.</pre>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let host = "http://localhost:8001";
+    let currentMasterPort = "8001";
+
+    function showAlert(message) {
+      alert(message);
+      console.log(message);
+    }
+
+    function updateNodeStatus() {
+      fetch(`${host}/nodes`)
+        .then(response => {
+          if (!response.ok) throw new Error("Failed to get nodes status");
+          return response.json();
+        })
+        .then(data => {
+          renderNodes(data);
+          setTimeout(updateNodeStatus, 5000);
+        })
+        .catch(error => {
+          console.error("Error fetching nodes:", error);
+          setTimeout(updateNodeStatus, 5000);
+        });
+    }
+
+    function renderNodes(data) {
+      const container = document.getElementById('nodes-container');
+      container.innerHTML = '';
+
+      // Display master status
+      const masterStatus = document.createElement('div');
+      masterStatus.className = data.isMaster ? 'status-box status-master' : 'status-box status-slave';
+      masterStatus.innerHTML = `
+        <i class="fas ${data.isMaster ? 'fa-server' : 'fa-hdd'}"></i> 
+        ${data.isMaster ? 'Master' : 'Slave'}: ${extractPort(data.master)} - Up
+      `;
+      container.appendChild(masterStatus);
+
+      // Display each slave's status
+      data.slaves.forEach((slave, index) => {
+        const slaveElement = document.createElement('div');
+        slaveElement.className = 'status-box status-slave';
+        slaveElement.id = `slave-${index}`;
+        slaveElement.innerHTML = `
+          <i class="fas fa-hdd"></i> 
+          Slave ${index + 1}: ${extractPort(slave)} - Checking...
+        `;
+        container.appendChild(slaveElement);
+
+        // Check the status of each slave
+        checkSlaveStatus(slave, index);
+      });
+    }
+
+    function extractPort(url) {
+      const match = url.match(/:(\d+)/);
+      return match ? `Port ${match[1]}` : url;
+    }
+
+    function checkSlaveStatus(slaveUrl, index) {
+      fetch(`${slaveUrl}/ping`)
+        .then(response => {
+          const element = document.getElementById(`slave-${index}`);
+          if (response.ok) {
+            element.className = 'status-box status-slave';
+            element.innerHTML = `
+              <i class="fas fa-hdd"></i> 
+              Slave ${index + 1}: ${extractPort(slaveUrl)} - Up
+            `;
+          } else {
+            throw new Error("Slave not responding");
+          }
+        })
+        .catch(error => {
+          const element = document.getElementById(`slave-${index}`);
+          element.className = 'status-box status-down';
+          element.innerHTML = `
+            <i class="fas fa-exclamation-triangle"></i> 
+            Slave ${index + 1}: ${extractPort(slaveUrl)} - Down
+          `;
+        });
+    }
+
+    function findNewMaster() {
+      const slaves = [
+        {port: '8002', element: 'slave1-status'},
+        {port: '8003', element: 'slave2-status'}
+      ];
+      
+      let newMasterFound = false;
+      
+      slaves.forEach(slave => {
+        fetch(`http://localhost:${slave.port}/is-master`)
+          .then(response => {
+            if (response.ok) {
+              return response.json();
+            }
+            throw new Error("Not responding");
+          })
+          .then(data => {
+            if (data.isMaster && !newMasterFound) {
+              newMasterFound = true;
+              currentMasterPort = slave.port;
+              host = `http://localhost:${slave.port}`;
+              
+              // Update UI
+              document.getElementById('master-status').className = 'status-box status-down';
+              document.getElementById('master-status').innerHTML = '<i class="fas fa-exclamation-triangle"></i> Old Master: Down';
+              
+              const element = document.getElementById(slave.element);
+              element.className = 'status-box status-new-master';
+              element.innerHTML = `<i class="fas fa-crown"></i> New Master: Up (Port ${slave.port})`;
+              
+              showAlert(`Master has switched to node on port ${slave.port}`);
+            }
+          })
+          .catch(err => {
+            console.error(`Error checking slave ${slave.port}:`, err);
+            const element = document.getElementById(slave.element);
+            element.className = 'status-box status-down';
+            element.innerHTML = `<i class="fas fa-exclamation-triangle"></i> Slave ${slave.port.charAt(3)}: Down`;
+          });
+      });
+    }
+
+    function createDB() {
+      const db = document.getElementById("dbname").value;
+      if (!db) {
+        showAlert("Please enter database name");
+        return;
+      }
+      fetch(`${host}/createdb?name=${db}`)
+        .then(res => res.text())
+        .then(showAlert)
+        .catch(err => showAlert("Error: " + err));
+    }
+
+    function dropDB() {
+      const db = document.getElementById("dbname").value;
+      if (!db) {
+        showAlert("Please enter database name");
+        return;
+      }
+      
+      if (confirm(`Are you sure you want to drop database '${db}'? This action cannot be undone.`)) {
+        fetch(`${host}/dropdb?name=${db}`)
+          .then(res => res.text())
+          .then(showAlert)
+          .catch(err => showAlert("Error: " + err));
+      }
+    }
+
+    function createTable() {
+      const db = document.getElementById("dbname").value;
+      const table = document.getElementById("table").value;
+      const schema = document.getElementById("schema").value;
+      
+      if (!db || !table || !schema) {
+        showAlert("Please fill all fields");
+        return;
+      }
+      
+      fetch(`${host}/createtable?dbname=${db}&table=${table}&schema=${encodeURIComponent(schema)}`)
+        .then(res => res.text())
+        .then(showAlert)
+        .catch(err => showAlert("Error: " + err));
+    }
+
+    function insert() {
+      const dbname = document.getElementById("dbname").value;
+      const table = document.getElementById("insert_table").value;
+      const values = document.getElementById("insert_values").value;
+      
+      if (!dbname || !table || !values) {
+        showAlert("Please fill all fields");
+        return;
+      }
+      
+      fetch(`${host}/insert`, {
+        method: "POST",
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ dbname, table, values })
+      })
+      .then(res => res.text())
+      .then(showAlert)
+      .catch(err => showAlert("Error: " + err));
+    }
+
+    function selectAll() {
+      const dbname = document.getElementById("dbname").value;
+      const table = document.getElementById("select_table").value;
+      
+      if (!dbname || !table) {
+        showAlert("Please fill database name and table fields");
+        return;
+      }
+      
+      const resultsElement = document.getElementById("results");
+      resultsElement.textContent = "Loading...";
+      
+      fetch(`${host}/select?dbname=${dbname}&table=${table}`)
+        .then(res => {
+          if (!res.ok) throw new Error(res.statusText);
+          return res.json();
+        })
+        .then(data => {
+          if (data && data.length > 0) {
+            resultsElement.textContent = JSON.stringify(data, null, 2);
+            resultsElement.className = "";
+          } else {
+            resultsElement.textContent = "No records found in this table.";
+            resultsElement.className = "empty-results";
+          }
+        })
+        .catch(err => {
+          resultsElement.textContent = "Error: " + err.message;
+          resultsElement.className = "empty-results";
+        });
+    }
+
+    function search() {
+      const dbname = document.getElementById("dbname").value;
+      const table = document.getElementById("select_table").value;
+      const column = document.getElementById("search_column").value;
+      const value = document.getElementById("search_value").value;
+      
+      if (!dbname || !table || !column || !value) {
+        showAlert("Please fill all fields for search");
+        return;
+      }
+      
+      const resultsElement = document.getElementById("results");
+      resultsElement.textContent = "Searching...";
+      
+      fetch(`${host}/search?dbname=${dbname}&table=${table}&column=${encodeURIComponent(column)}&value=${encodeURIComponent(value)}`)
+        .then(res => {
+          if (!res.ok) throw new Error(res.statusText);
+          return res.json();
+        })
+        .then(data => {
+          if (data && data.length > 0) {
+            resultsElement.textContent = JSON.stringify(data, null, 2);
+            resultsElement.className = "";
+          } else {
+            resultsElement.textContent = `No records found matching ${column} = ${value}`;
+            resultsElement.className = "empty-results";
+          }
+        })
+        .catch(err => {
+          resultsElement.textContent = "Error: " + err.message;
+          resultsElement.className = "empty-results";
+        });
+    }
+
+    function update() {
+      const dbname = document.getElementById("dbname").value;
+      const table = document.getElementById("update_table").value;
+      const set = document.getElementById("update_set").value;
+      const where = document.getElementById("update_where").value;
+      
+      if (!dbname || !table || !set || !where) {
+        showAlert("Please fill all fields");
+        return;
+      }
+      
+      fetch(`${host}/update`, {
+        method: "POST",
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ dbname, table, set, where })
+      })
+      .then(res => res.text())
+      .then(showAlert)
+      .catch(err => showAlert("Error: " + err));
+    }
+
+    function deleteRec() {
+      const dbname = document.getElementById("dbname").value;
+      const table = document.getElementById("delete_table").value;
+      const where = document.getElementById("delete_where").value;
+      
+      if (!dbname || !table || !where) {
+        showAlert("Please fill all fields");
+        return;
+      }
+      
+      if (confirm(`Are you sure you want to delete records from table '${table}' where ${where}?`)) {
+        fetch(`${host}/delete`, {
+          method: "POST",
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ dbname, table, where })
+        })
+        .then(res => res.text())
+        .then(showAlert)
+        .catch(err => showAlert("Error: " + err));
+      }
+    }
+
+    // Initialize node status checking when page loads
+    window.onload = function() {
+      updateNodeStatus();
+      
+      // Set focus on the database name field
+      document.getElementById("dbname").focus();
+    };
+  </script>
+</body>
+</html>
