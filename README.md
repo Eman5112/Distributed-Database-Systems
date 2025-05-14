@@ -1,310 +1,361 @@
-# Distributed Database System
+# Distributed Master-Slave Database System
 
-A fault-tolerant distributed database system with master-slave architecture, built in Go. This system provides a RESTful API for database operations with automatic replication across multiple nodes and master election when the primary node fails.
+A robust, fault-tolerant distributed database management system with master-slave architecture built with Go and MySQL.
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Features](#features)
+- [System Requirements](#system-requirements)
+- [Installation & Setup](#installation--setup)
+  - [Prerequisites](#prerequisites)
+  - [Database Setup](#database-setup)
+  - [System Configuration](#system-configuration)
+  - [Running the System](#running-the-system)
+- [Usage Examples](#usage-examples)
+  - [Database Operations](#database-operations)
+  - [Table Operations](#table-operations)
+  - [Data Operations](#data-operations)
+  - [Search Operations](#search-operations)
+- [API Reference](#api-reference)
+- [System Architecture](#system-architecture)
+- [Troubleshooting](#troubleshooting)
+- [Contributing](#contributing)
+- [License](#license)
+
+## Overview
+
+This distributed database system implements a master-slave architecture for high availability and fault tolerance. It allows for automatic failover in case the master node becomes unavailable, with slaves capable of being promoted to master roles. The system handles database operations via a RESTful API and maintains data consistency through asynchronous replication.
 
 ## Features
 
-- **Master-Slave Architecture**: One master node handles write operations and replicates changes to slave nodes
-- **Automatic Failover**: If the master node goes down, a slave node will automatically be elected as the new master
-- **RESTful API**: Simple HTTP API for database operations
-- **Cross-Origin Resource Sharing (CORS)**: Supports cross-origin requests
-- **Fault Tolerance**: Implements retry mechanisms for replication with exponential backoff
-- **Database Operations**: Support for creating/dropping databases, creating tables, and CRUD operations on records
+- Master-slave architecture with automatic failover
+- Database creation, modification, and deletion
+- Table management with custom schemas
+- CRUD operations for data management
+- Asynchronous replication with retry mechanisms
+- Search functionality
+- Health monitoring and leader election
+- REST API interface
+- Cross-Origin Resource Sharing (CORS) support
 
-## Prerequisites
+## System Requirements
 
-- Go 1.16 or higher
-- MySQL server installed and running
-- Git (for cloning the repository)
+- Go 1.15+
+- MySQL 5.7+ or 8.0+
+- Network connectivity between nodes
 
-## Setup Instructions
+## Installation & Setup
 
-### 1. Clone the Repository
+### Prerequisites
 
+1. Install Go:
+   ```
+   # For Windows
+   # Download and install from https://golang.org/dl/
+   ```
+
+2. Install MySQL:
+   ```
+   # For Windows
+   # Download and install from https://dev.mysql.com/downloads/installer/
+   ```
+
+3. Install required Go packages:
+   ```
+   go get github.com/go-sql-driver/mysql
+   ```
+
+### System Configuration
+
+1. Clone the repository:
+   ```
+   git clone https://github.com/yourusername/distributed-db.git
+   cd distributed-db
+   ```
+
+2. Configure master node:
+   
+   Edit the `master.go` file to update slave addresses if needed:
+   ```go
+   var slaveAddresses = []string{
+     "http://localhost:8009", 
+     "http://172.31.243.32:8002",
+     // Add more slaves as needed
+   }
+   ```
+
+3. Configure slave nodes:
+   
+   Edit each `slave.go` file to set the master address:
+   ```go
+   var masterAddress string = "http://192.168.137.33:8001"
+   ```
+
+### Running the System
+
+1. Start the master node:
+   ```
+   go run master.go
+   ```
+   You should see: `Master server running on port 8001...`
+
+2. Start each slave node:
+   ```
+   go run slave.go
+   ```
+   You should see: `Slave server running on port 8009...`
+
+3. Verify the setup by checking master status:
+   ```
+   curl http://localhost:8001/is-master
+   ```
+   Expected response: `{"isMaster":true}`
+
+4. Check slave status:
+   ```
+   curl http://localhost:8009/is-master
+   ```
+   Expected response: `{"isMaster":false}`
+
+## Usage Examples
+
+### Database Operations
+
+#### Create a Database
+
+**Request:**
 ```bash
-git clone <repository-url>
-cd distributed-database-system
+curl -X GET "http://localhost:8001/createdb?name=testdb"
 ```
 
-### 2. Configure MySQL
-
-Ensure MySQL is running and create user accounts with appropriate permissions:
-
-For master node:
-```sql
-CREATE USER 'root'@'localhost' IDENTIFIED BY 'root';
-GRANT ALL PRIVILEGES ON *.* TO 'root'@'localhost' WITH GRANT OPTION;
-FLUSH PRIVILEGES;
-```
-
-For slave nodes:
-```sql
-CREATE USER 'root'@'localhost' IDENTIFIED BY 'rootroot';
-GRANT ALL PRIVILEGES ON *.* TO 'root'@'localhost' WITH GRANT OPTION;
-FLUSH PRIVILEGES;
-```
-
-### 3. Configure Node Addresses
-
-Edit the master server configuration in `main.go` to update slave addresses if needed:
-
-```go
-var slaveAddresses = []string{
-    "http://192.168.1.4:8002", 
-    "http://192.168.1.8:8005", 
-    "http://192.168.1.6:8004", 
-    "http://192.168.1.7:8006"
-}
-```
-
-### 4. Build and Run the Master Node
-
-```bash
-go build -o master
-./master
-```
-
-The master server will be running on port 8001.
-
-### 5. Build and Run Slave Nodes
-
-Update the slave configuration (port and credentials) in each slave's main.go file if needed, then:
-
-```bash
-go build -o slave
-./slave
-```
-
-Repeat for each slave node on different servers, changing the port number and MySQL credentials as necessary.
-
-## API Usage Examples
-
-### Check Node Status
-
-```bash
-curl http://localhost:8001/ping
-```
-
-Expected response:
-```
-pong
-```
-
-### Check if Node is Master
-
-```bash
-curl http://localhost:8001/is-master
-```
-
-Expected response:
-```json
-{"isMaster":true}
-```
-
-### Get Node Information
-```bash
-curl http://localhost:8001/nodes
-```
-
-Expected response:
-```json
-{
-  "master": "http://localhost:8001",
-  "slaves": [
-    "http://192.168.1.4:8002",
-    "http://192.168.1.8:8005",
-    "http://192.168.1.6:8004",
-    "http://192.168.1.7:8006"
-  ],
-  "isMaster": true
-}
-```
-
-### Create a Database
-
-```bash
-curl "http://localhost:8001/createdb?name=testdb"
-```
-
-Expected response:
+**Response:**
 ```json
 {"message":"Database created successfully"}
 ```
 
-### Create a Table
+#### Drop a Database
 
-#### Method 1: Using schema parameter
-
+**Request:**
 ```bash
-curl -X POST "http://localhost:8001/createtable?dbname=testdb&table=users&schema=id%20INT%20AUTO_INCREMENT%20PRIMARY%20KEY,%20name%20VARCHAR(50),%20email%20VARCHAR(100)"
+curl -X GET "http://localhost:8001/dropdb?name=testdb"
 ```
 
-#### Method 2: Using JSON body with columns
-
-```bash
-curl -X POST "http://localhost:8001/createtable?dbname=testdb&table=users" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "columns": [
-      {"Name": "name", "DataType": "VARCHAR(50)"},
-      {"Name": "email", "DataType": "VARCHAR(100)"}
-    ]
-  }'
-```
-
-Expected response:
-```json
-{"message":"Table created successfully"}
-```
-
-### Insert a Record
-
-#### Method 1: Using values string
-
-```bash
-curl -X POST "http://localhost:8001/insert" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "dbname": "testdb",
-    "table": "users",
-    "values": "NULL, \"John Doe\", \"john@example.com\""
-  }'
-```
-
-#### Method 2: Using records object
-
-```bash
-curl -X POST "http://localhost:8001/insert" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "dbname": "testdb",
-    "table": "users",
-    "records": {
-      "name": "Jane Doe",
-      "email": "jane@example.com"
-    }
-  }'
-```
-
-Expected response:
-```json
-{"message":"Record inserted successfully"}
-```
-
-### Query Records
-
-```bash
-curl "http://localhost:8001/select?dbname=testdb&table=users"
-```
-
-Expected response:
-```json
-[
-  {
-    "Id": 1,
-    "email": "john@example.com",
-    "name": "John Doe"
-  },
-  {
-    "Id": 2,
-    "email": "jane@example.com",
-    "name": "Jane Doe"
-  }
-]
-```
-
-### Update a Record
-
-```bash
-curl -X POST "http://localhost:8001/update" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "dbname": "testdb",
-    "table": "users",
-    "set": "name = \"John Smith\"",
-    "where": "Id = 1"
-  }'
-```
-
-Expected response:
-```json
-{"message":"Record updated successfully"}
-```
-
-### Delete a Record
-
-```bash
-curl -X POST "http://localhost:8001/delete" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "dbname": "testdb",
-    "table": "users",
-    "where": "Id = 1"
-  }'
-```
-
-Expected response:
-```json
-{"message":"Record deleted successfully"}
-```
-
-### Drop a Database
-
-```bash
-curl "http://localhost:8001/dropdb?name=testdb"
-```
-
-Expected response:
+**Response:**
 ```json
 {"message":"Database dropped successfully"}
 ```
 
-## Failover Process
+### Table Operations
 
-The system automatically checks the health of the master node every 10-15 seconds. If the master becomes unavailable, an election process starts among the slave nodes and a new master is elected.
+#### Create a Table
 
-To test failover:
-1. Start the master and at least one slave node
-2. Terminate the master process
-3. Wait approximately 15 seconds
-4. Observe that one of the slave nodes becomes the new master
+**Method 1: Using Schema String**
 
-You can check by running:
+**Request:**
 ```bash
-curl http://localhost:8006/is-master
+curl -X GET "http://localhost:8001/createtable?dbname=testdb&table=users&schema=name VARCHAR(100), email VARCHAR(100), age INT"
 ```
 
-## Architecture Overview
+**Response:**
+```json
+{"message":"Table created successfully"}
+```
 
-### Master Node Responsibilities
-- Accept all client requests (read/write operations)
-- Execute operations on its local database
-- Replicate changes to all slave nodes
-- Monitor its own health
+**Method 2: Using JSON Body**
 
-### Slave Node Responsibilities
-- Maintain a replica of the master's data
-- Accept replication requests from the master
-- Monitor the master's health
-- Participate in leader election when the master fails
-- Take over as the new master when elected
+**Request:**
+```bash
+curl -X POST "http://localhost:8001/createtable?dbname=testdb&table=products" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "columns": [
+      {"Name": "product_name", "DataType": "VARCHAR(100)"},
+      {"Name": "price", "DataType": "DECIMAL(10,2)"},
+      {"Name": "inventory", "DataType": "INT"}
+    ]
+  }'
+```
 
-## Implementation Details
+**Response:**
+```json
+{"message":"Table created successfully"}
+```
 
-- The system uses HTTP for communication between nodes
-- MySQL is used as the underlying database engine
-- Replication is done through the master pushing changes to slaves
-- Leader election uses a simple algorithm with randomized delays to prevent conflicts
-- Error handling includes retries with exponential backoff
+### Data Operations
 
-## Limitations and Future Improvements
+#### Insert Data
 
-- Current implementation doesn't handle network partitions correctly
-- Authentication and security features are minimal
-- No built-in data partitioning/sharding
-- No automatic synchronization of a slave that was down and comes back online
-- Could add support for read replicas to distribute read operations
+**Method 1: Using Values String**
+
+**Request:**
+```bash
+curl -X POST "http://localhost:8001/insert" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "dbname": "testdb", 
+    "table": "users", 
+    "values": "NULL, \"John Doe\", \"john@example.com\", 30"
+  }'
+```
+
+**Method 2: Using Records Object**
+
+**Request:**
+```bash
+curl -X POST "http://localhost:8001/insert" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "dbname": "testdb", 
+    "table": "products", 
+    "records": {
+      "product_name": "Laptop", 
+      "price": 999.99, 
+      "inventory": 50
+    }
+  }'
+```
+
+**Response:**
+```json
+{"message":"Record inserted successfully"}
+```
+
+#### Select Data
+
+**Request:**
+```bash
+curl -X GET "http://localhost:8001/select?dbname=testdb&table=users"
+```
+
+**Response:**
+```json
+[
+  {"Id": 1, "name": "John Doe", "email": "john@example.com", "age": 30}
+]
+```
+
+#### Update Data
+
+**Request:**
+```bash
+curl -X POST "http://localhost:8001/update" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "dbname": "testdb", 
+    "table": "users", 
+    "set": "name = \"Jane Doe\", age = 31", 
+    "where": "Id = 1"
+  }'
+```
+
+**Response:**
+```json
+{"message":"Record updated successfully"}
+```
+
+#### Delete Data
+
+**Request:**
+```bash
+curl -X POST "http://localhost:8001/delete" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "dbname": "testdb", 
+    "table": "users", 
+    "where": "Id = 1"
+  }'
+```
+
+**Response:**
+```json
+{"message":"Record deleted successfully"}
+```
+
+### Search Operations
+
+**Request:**
+```bash
+curl -X GET "http://localhost:8001/search?dbname=testdb&table=products&column=product_name&value=Laptop"
+```
+
+**Response:**
+```json
+[
+  {"Id": 1, "product_name": "Laptop", "price": "999.99", "inventory": 50}
+]
+```
+
+## API Reference
+
+### Master Node Endpoints
+
+| Endpoint | Method | Description | Parameters |
+|----------|--------|-------------|------------|
+| `/ping` | GET | Health check | None |
+| `/nodes` | GET | List all nodes | None |
+| `/is-master` | GET | Check if node is master | None |
+| `/createdb` | GET | Create a database | `name` (query param) |
+| `/dropdb` | GET | Drop a database | `name` (query param) |
+| `/createtable` | GET/POST | Create a table | `dbname`, `table`, `schema` (query params) or JSON body with columns |
+| `/insert` | POST | Insert record | JSON body with insertion details |
+| `/select` | GET | Select records | `dbname`, `table` (query params) |
+| `/search` | GET | Search records | `dbname`, `table`, `column`, `value` (query params) |
+| `/update` | POST | Update records | JSON body with update details |
+| `/delete` | POST | Delete records | JSON body with deletion details |
+
+### Slave Node Endpoints
+
+| Endpoint | Method | Description | Parameters |
+|----------|--------|-------------|------------|
+| `/ping` | GET | Health check | None |
+| `/is-master` | GET | Check if node is master | None |
+| `/replicate/db` | GET | Replicate database | `name` (query param) |
+| `/replicate/dropdb` | GET | Replicate database drop | `name` (query param) |
+| `/replicate/table` | GET | Replicate table creation | `dbname`, `table`, `schema` (query params) |
+| `/replicate/insert` | POST | Replicate insert | JSON body with insertion details |
+| `/replicate/update` | POST | Replicate update | JSON body with update details |
+| `/replicate/delete` | POST | Replicate delete | JSON body with deletion details |
+| `/search` | GET | Search records | `dbname`, `table`, `column`, `value` (query params) |
+
+## System Architecture
+
+The system uses a master-slave architecture:
+
+1. **Master Node** - Handles all write operations and coordinates replication
+2. **Slave Nodes** - Process read operations and maintain replicated copies of data
+3. **Failover Mechanism** - Automatic promotion of slaves to master role when needed
+
+For more details, refer to the [architecture document](./ARCHITECTURE.md).
+
+## Troubleshooting
+
+### Common Issues
+
+1. **Connection Refused**
+   - Ensure MySQL is running: `sudo systemctl status mysql`
+   - Verify database credentials in the code
+
+2. **Replication Failures**
+   - Check network connectivity between nodes
+   - Ensure all nodes are running and accessible
+
+3. **Permission Denied**
+   - Verify MySQL user permissions: `SHOW GRANTS FOR 'root'@'localhost';`
+
+### Logs
+
+- Check application logs for detailed error messages
+- MySQL logs are typically found at `/var/log/mysql/error.log`
+
+## Contributing
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
 ## License
 
-[License Information]
+This project is licensed under the MIT License - see the LICENSE file for details.
