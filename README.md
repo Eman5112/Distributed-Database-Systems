@@ -27,6 +27,26 @@ A robust, fault-tolerant distributed database management system with master-slav
 
 This distributed database system implements a master-slave architecture for high availability and fault tolerance. It allows for automatic failover in case the master node becomes unavailable, with slaves capable of being promoted to master roles. The system handles database operations via a RESTful API and maintains data consistency through asynchronous replication.
 
+Architecture Overview
++-------------------------+
+|      Master Node        |
+|-------------------------|
+| - DB Write Access       |
+| - Broadcast to Slaves   |
++-------------------------+
+            |
+      +-----+-----+
+      |           |
+      ▼           ▼
++-------------+  +-------------+
+| Slave Node  |  | Slave Node  |
+|-------------|  |-------------|
+| - Read-only |  | - Read-only |
+|   DB        |  |   DB        |
+| - Listen to |  | - Listen to |
+|   MQ        |  |   MQ        |
++-------------+  +-------------+
+
 ## Features
 
 - Master-slave architecture with automatic failover
